@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How this was built — Under review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,600;0,800;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#efe7d7;--card:#faf6ec;--ink:#1c211c;--ink2:#5a5245;--rule:#b9ab90;--brown:#8a6234;
+--mono:'IBM Plex Mono',ui-monospace,monospace;--serif:'Bitter',Georgia,serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);line-height:1.62;font-size:16.5px}
+.wrap{max-width:760px;margin:0 auto;padding:0 22px 80px}
+header{border:1px solid var(--ink);border-top-width:5px;background:var(--card);margin:18px 0 30px;padding:22px 24px}
+h1{font-size:clamp(1.9rem,4.6vw,2.9rem);line-height:1.05;margin:0 0 8px;font-weight:800;letter-spacing:-.02em}
+.back{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);text-decoration:none}
+.back:hover{color:var(--ink)}
+h2{font-family:var(--mono);font-size:11px;letter-spacing:.17em;text-transform:uppercase;color:var(--ink2);
+   margin:34px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
+p{margin:0 0 14px}
+ul{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px}
+code{font-family:var(--mono);font-size:.86em;background:#e7dcc4;padding:1px 5px}
+table{width:100%;border-collapse:collapse;font-size:.86rem;font-family:var(--mono);margin:0 0 16px}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--rule)}
+th{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink2)}
+.note{border:1px dashed var(--rule);padding:13px 15px;font-size:.92rem;margin:16px 0}
+a{color:var(--brown)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="back" href="index.html">&larr; Back to the map</a>
+  <h1>How this was built</h1>
+  <p style="margin:0;color:#5a5245">Sources, parsing method, scope and the things this database does not tell you.</p>
+</header>
+
+<h2>What the source is</h2>
+<p>The U.S. Board on Geographic Names is the federal body that decides the official name of
+American geographic features. Its Domestic Names Committee publishes a
+<a href="https://www.usgs.gov/us-board-on-geographic-names/dnc-review-lists" target="_blank" rel="noopener">Quarterly Review List</a>
+of every proposal pending before it. Each list is a PDF containing full case files: the proposed name, who
+proposed it, the coordinates, the feature, the proponent's stated reasoning, often quoted directly, and
+which governments and Tribes were consulted.</p>
+<p>The Board has purview over natural topographic and hydrographic features, reservoirs, canals, channels,
+crossings, levees and unincorporated populated places. It does <em>not</em> decide the names of incorporated
+cities and towns, Census designated places, civil divisions, ZIP codes or administered land areas.</p>
+
+<h2>Scope, and why it stops where it does</h2>
+<p>This database covers <strong>Review Lists 450 through 464</strong>, posted February 6, 2023 through
+July 16, 2026. That is <strong>493 proposals</strong> across 47 states and territories.</p>
+<p>The cutoff is a data-quality decision, not an arbitrary one. Every proposal in lists 450 and later
+opens with a literal <code>Proposal Information</code> heading followed by a structured label/value block,
+which is what the parser splits on. Lists 442 through 449 use an earlier layout: compact
+semicolon-delimited paragraphs with no case numbers and different field names. Those older lists could
+have been parsed loosely, but the fields would not line up with the modern ones, and a database that
+silently mixes two schemas is worse than one that states its boundary. They are excluded on purpose.</p>
+
+<h2>How the parsing works</h2>
+<ul>
+  <li>Each review list PDF is downloaded from the USGS content host and read with PyMuPDF.</li>
+  <li>Proposals are split on the <code>Proposal Information</code> heading rather than on PDF bookmarks,
+      because the bookmark structure changes three times across this date range and in one list a single
+      proposal's title is split across four separate bookmarks.</li>
+  <li>Within each proposal, a known set of field labels is matched on its own line, and the lines that
+      follow, up to the next label or section heading, become the value.</li>
+  <li>Each block is truncated where the <em>next</em> proposal's title begins, so a case summary cannot
+      absorb the following entry.</li>
+  <li>Records are de-duplicated on the Board's case number where one exists.</li>
+  <li>The build fails rather than publishing if any in-scope list yields zero proposals, or if the total
+      falls below 300.</li>
+</ul>
+
+<h2>Proposals are not the same as names</h2>
+<p>Each review list states a count on its cover page. Those counts are <em>names</em>, not proposals, and a
+single proposal can carry several names. List 458 announces 69 names; it contains 35 proposals, several of
+which rename a cluster of connected features at once. The per-list numbers below show both, so the gap is
+visible rather than hidden.</p>
+
+<table id="tbl">
+  <thead><tr><th>List</th><th>Posted</th><th>Names stated</th><th>Proposals parsed</th><th>With coordinates</th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<h2>Titles, and where they are reconstructed</h2>
+<p>A proposal's title is normally the heading the Board prints above it. In 29 of the 493 records that
+heading grab ran into surrounding narrative, usually in the older lists, so the title was rebuilt from the
+structured fields instead &mdash; "Change X to Y" or "New name Y". Those records carry a
+<code>title_synthesized</code> flag in the data. Two blocks that contained no identifying content at all
+were parsing artifacts and are dropped, which is why the total is 493 rather than 495.</p>
+<p>Eight proposals rename a whole cluster of features at once and use a plural <code>Proposed names</code>
+field; their titles are shown as "New names: A, B, C and N more". Their Board case numbers are ranges, like
+<code>6402-6411</code>.</p>
+
+<h2>What is in each record</h2>
+<p>Proposed name, current official name where the proposal is a change, proposal type, proponent, date
+proposed, Board case number, GNIS ID, feature class, feature size, a plain description of where the feature
+is, county, state, coordinates, land ownership, the USGS topographic quadrangle, the recorded name history,
+the full case summary, other names found during research, and the list of stakeholders consulted.</p>
+<p>488 of the 493 proposals carry usable coordinates and appear on the map. The remaining 5 are listed but
+not plotted.</p>
+
+<h2>Categories, and how they were assigned</h2>
+<ul>
+  <li><strong>New</strong> (285), <strong>Change</strong> (147) and <strong>Local name made official</strong>
+      (61) come from the proposal's own title and its stated proposal type. The third group matters: those
+      features already carry a name locally, and the Board is being asked to make that name the official
+      federal one. They are neither new coinages nor renamings.</li>
+  <li><strong>Commemorative</strong> is set when the Board's own proposal type contains "commemorative."</li>
+  <li><strong>Offensive or derogatory</strong> is set when the Board's proposal type says the name is
+      considered offensive or derogatory. It is the Board's characterization, not one added here.</li>
+  <li><strong>Tribal or Indigenous</strong> is the one derived tag: it is set by keyword match against the
+      case summary for terms such as tribe, tribal, nation, Indigenous and named languages and peoples.
+      It is a search aid and will both over- and under-count. Do not cite it as a statistic.</li>
+</ul>
+
+<h2>Language in the records</h2>
+<p>Some proposals seek to replace names that are slurs. The case summaries reproduce those names because
+the record is about them. Text appears here exactly as the Board published it, including the Board's own
+redactions, which it applies to some terms and not others. Nothing was sanitized or added.</p>
+
+<h2>What this does not tell you</h2>
+<ul>
+  <li><strong>Outcomes.</strong> These are pending or recently reviewed proposals, not decisions. A
+      proposal appearing here has not necessarily been approved, rejected or acted on. Approved names go
+      into the Geographic Names Information System within three to four days of the Board's monthly
+      meeting; this database does not track that step.</li>
+  <li><strong>Everything before February 2023</strong>, for the schema reason above.</li>
+  <li><strong>Foreign and Antarctic names</strong>, which a separate Board committee handles.</li>
+</ul>
+
+<div class="note">
+  <strong>Built with AI assistance.</strong> The parsing, the site and this page were produced with Claude.
+  Every field is machine-extracted from the Board's PDFs, and PDF extraction can misread a line. Each case
+  file links to its source PDF. Check it before relying on any single detail.
+</div>
+
+<h2>Rebuilding it</h2>
+<p>The parser is <code>parse_bgn.py</code> in this repository. It downloads nothing on its own; point it at
+a folder of review-list PDFs named <code>list_&lt;number&gt;.pdf</code> and it writes <code>bgn_raw.json</code>.
+The Board posts a new list roughly every quarter, in January, April, July and October.</p>
+
+<p style="margin-top:34px"><a class="back" href="index.html">&larr; Back to the map</a></p>
+</div>
+<script>
+fetch('data/proposals.json').then(r=>r.json()).then(d=>{
+  const tb=document.querySelector('#tbl tbody');
+  tb.innerHTML = d.meta.lists.map(l=>`<tr><td>${l.list}</td><td>${l.posted||''}</td>
+    <td>${l.stated_names??l.stated_proposals??'—'}</td><td>${l.parsed}</td><td>${l.with_coords}</td></tr>`).join('');
+}).catch(()=>{});
+</script>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Under review — every place name America is deciding on</title>
+<meta name="description" content="Every geographic name proposal pending before the U.S. Board on Geographic Names, from Quarterly Review Lists 450 to 464. Searchable case files, mapped.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="house.css">
+<style>
+:root{--ink3:#8a4f72}
+#map{height:min(64vh,600px);width:100%;background:#dfe3dc}
+.leaflet-container{font-family:var(--sans);font-size:12px;background:#dfe3dc}
+#results{max-height:min(64vh,600px);overflow:auto}
+.rec .old{color:var(--ink2);font-weight:400;text-decoration:line-through;text-decoration-thickness:1px}
+.legend{display:flex;gap:15px;flex-wrap:wrap;font-size:var(--t-micro);letter-spacing:.1em;
+  text-transform:uppercase;font-weight:700;color:var(--ink2);padding:9px 26px;border-top:1px solid var(--hair)}
+.legend i{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px}
+#follow{padding:3px 9px;margin-left:10px;font-size:9px;vertical-align:middle}
+#follow[aria-pressed="true"]::before{content:"✓ ";}
+.colhead>span:first-child{display:flex;align-items:center}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="strip">
+    <span>U.S. Board on Geographic Names &middot; Domestic Names Committee</span>
+    <span id="range">Quarterly review lists</span>
+  </div>
+
+  <div class="head">
+    <!-- mark: contour rings around a summit, one of them being redrawn -->
+    <div class="hmark" aria-hidden="true">
+      <img src="img/mark.png" alt="Abstract screenprint of overlapping topographic contour lines, one drawn as a dashed boundary being redrawn" width="640" height="357">
+    </div>
+    <h1>Under review</h1>
+    <p class="sub">The Board on Geographic Names decides the official name of every American stream,
+      summit, lake and ridge. <b>Anyone can file a proposal.</b> Each becomes a case file stating who
+      asked, what they want it called, where the feature is and the reason they gave. These are the
+      ones still on the docket.</p>
+    <p class="src">Source: <a href="https://www.usgs.gov/us-board-on-geographic-names/dnc-review-lists" target="_blank" rel="noopener">Domestic Names Committee quarterly review lists</a>
+      &middot; <a href="methodology.html">method</a></p>
+  </div>
+
+  <div class="capline" id="capline"></div>
+  <div class="counts" id="counts"></div>
+
+  <div class="controls">
+    <input id="q" type="search" placeholder="Search names, proponents, counties, case summaries…" autocomplete="off">
+    <select id="state"><option value="">All states</option></select>
+    <select id="klass"><option value="">All feature types</option></select>
+    <select id="list"><option value="">All review lists</option></select>
+    <select id="sort">
+      <option value="new">Newest first</option><option value="old">Oldest first</option>
+      <option value="az">Name A–Z</option><option value="state">By state</option>
+    </select>
+  </div>
+  <div class="controls" style="border-bottom:1px solid var(--hair)">
+    <button class="chip" data-f="new" aria-pressed="false">New names</button>
+    <button class="chip" data-f="change" aria-pressed="false">Name changes</button>
+    <button class="chip" data-f="other" aria-pressed="false">Local name made official</button>
+    <button class="chip" data-f="commemorative" aria-pressed="false">Commemorative</button>
+    <button class="chip" data-f="offensive" aria-pressed="false">Offensive or derogatory</button>
+    <button class="chip" data-f="indigenous" aria-pressed="false">Tribal or Indigenous</button>
+    <button class="chip" data-f="withdrawn" aria-pressed="false">Withdrawn</button>
+  </div>
+
+  <div class="cols">
+    <div class="col">
+      <div class="colhead"><span>The map</span><span id="mapcount"></span></div>
+      <div id="map"></div>
+      <div class="legend">
+        <span><i style="background:#4a6b52"></i>New name</span>
+        <span><i style="background:#2f4d8a"></i>Name change</span>
+        <span><i style="background:#8a4a6b"></i>Local name made official</span>
+        <span>Base map: USGS National Map</span>
+      </div>
+    </div>
+    <div class="col">
+      <div class="colhead">
+        <span>Case files <button class="chip" id="follow" aria-pressed="true"
+          title="Show only the proposals currently visible on the map">Match the map</button></span>
+        <span id="count"></span>
+      </div>
+      <div id="results"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <p class="caution">Built with AI assistance from the Board's own PDFs. Names, quotations and case
+      summaries are reproduced as the Board published them, including the Board's own redactions of
+      derogatory words. Check the linked source PDF before relying on any detail.</p>
+    <p id="foot-note"></p>
+    <p><a href="methodology.html">How this was built, and what it leaves out &rarr;</a></p>
+  </div>
+</div>
+
+<div class="drawer" id="case" aria-hidden="true">
+  <div class="scrim" data-close></div>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="case-title">
+    <div class="dhead">
+      <div><div class="lbl" id="case-lbl"></div><h2 id="case-title"></h2></div>
+      <button class="xbtn" data-close aria-label="Close">&times;</button>
+    </div>
+    <div class="dbody" id="case-body"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=n=>Number(n).toLocaleString('en-US');
+const COLORS={new:'#4a6b52',change:'#2d4a86',other:'#8a4a6b'};
+let DATA,ROWS=[],VIEW=[],SEL=null,MAP,LAYER,FOLLOW=true;
+const FILT={q:'',state:'',klass:'',list:'',sort:'new',flags:new Set()};
+
+fetch('data/proposals.json',{cache:'no-cache'}).then(r=>r.json()).then(d=>{DATA=d;ROWS=d.proposals;init();})
+ .catch(e=>{$('#results').innerHTML='<div class="empty">Could not load data. '+esc(e.message)+'</div>';});
+
+function parseDate(s){
+  if(!s) return 0;
+  const m=String(s).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m) return new Date(+m[3],+m[1]-1,+m[2]).getTime();
+  const t=Date.parse(s); return isNaN(t)?0:t;
+}
+
+function init(){
+  const M=DATA.meta;
+  $('#range').textContent='Lists '+M.list_min+'–'+M.list_max;
+  const changes=ROWS.filter(r=>r.kind==='change').length;
+  const offensive=ROWS.filter(r=>r.offensive).length;
+  $('#capline').innerHTML='Filed with the Board between <b>'+esc(M.posted_first)+
+    '</b> and <b>'+esc(M.posted_last)+'</b> &middot; quarterly review lists '+M.list_min+'&ndash;'+M.list_max+
+    ' &middot; <b>none of these have been decided</b> — every count below is of pending proposals';
+  const news=ROWS.filter(r=>r.kind==='new').length;
+  const local=ROWS.filter(r=>r.kind==='other').length;
+  $('#counts').innerHTML=[
+    [nf(M.count),'Proposals pending'],
+    [nf(news),'New names for unnamed features'],
+    [nf(changes),'Would change an existing name'],
+    [nf(local),'Would make a local name official'],
+    [nf(offensive),'Would replace a name the Board calls offensive'],
+  ].map(([b,s])=>`<div><b>${b}</b><span>${s}</span></div>`).join('');
+  $('#foot-note').textContent='Covering review lists '+M.list_min+' through '+M.list_max+
+    ' (posted '+M.posted_first+' through '+M.posted_last+'). '+M.with_coords+' of '+M.count+
+    ' proposals carry coordinates and appear on the map.';
+
+  const states=[...new Set(ROWS.map(r=>r.state).filter(Boolean))].sort();
+  $('#state').innerHTML+=states.map(s=>`<option>${esc(s)}</option>`).join('');
+  const classes=[...new Set(ROWS.map(r=>r.feature_class).filter(Boolean))].sort();
+  $('#klass').innerHTML+=classes.map(s=>`<option>${esc(s)}</option>`).join('');
+  [...new Set(ROWS.map(r=>r.list))].sort((a,b)=>b-a).forEach(n=>{
+    const m=DATA.meta.lists.find(l=>l.list===n);
+    $('#list').innerHTML+=`<option value="${n}">List ${n} · ${esc(m&&m.posted||'')}</option>`;
+  });
+
+  MAP=L.map('map',{scrollWheelZoom:true}).setView([39.5,-98.5],4);
+  L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',
+    {maxZoom:16,attribution:'USGS The National Map'}).addTo(MAP);
+  LAYER=L.layerGroup().addTo(MAP);
+  MAP.on('moveend zoomend',renderList);
+  $('#follow').addEventListener('click',e=>{
+    FOLLOW=!FOLLOW;
+    e.currentTarget.setAttribute('aria-pressed',String(FOLLOW));
+    renderList();
+  });
+
+  $('#q').addEventListener('input',e=>{FILT.q=e.target.value.toLowerCase().trim();render();});
+  ['state','klass','list','sort'].forEach(id=>$('#'+id).addEventListener('change',e=>{FILT[id]=e.target.value;render();}));
+  // only the filter chips — #follow shares the .chip class but is not a filter
+  document.querySelectorAll('.chip[data-f]').forEach(c=>c.addEventListener('click',()=>{
+    const f=c.dataset.f,on=c.getAttribute('aria-pressed')==='true';
+    c.setAttribute('aria-pressed',String(!on));
+    on?FILT.flags.delete(f):FILT.flags.add(f); render();
+  }));
+  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeCase));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCase();});
+  render();
+}
+
+function matches(r){
+  if(FILT.state&&r.state!==FILT.state) return false;
+  if(FILT.klass&&r.feature_class!==FILT.klass) return false;
+  if(FILT.list&&String(r.list)!==FILT.list) return false;
+  for(const f of FILT.flags){
+    if(f==='new'||f==='change'||f==='other'){ if(r.kind!==f) return false; }
+    else if(!r[f]) return false;
+  }
+  if(FILT.q){
+    const hay=[r.title,r.proposed_name,r.current_name,r.proponent,r.county,r.state,
+      r.feature_class,r.name_history,r.case_summary,r.other_names,r.case_number].join(' ').toLowerCase();
+    if(!hay.includes(FILT.q)) return false;
+  }
+  return true;
+}
+
+function render(){
+  VIEW=ROWS.filter(matches);
+  const s=FILT.sort;
+  VIEW.sort((a,b)=>{
+    if(s==='az') return (a.proposed_name||a.title||'').localeCompare(b.proposed_name||b.title||'');
+    if(s==='state') return (a.state||'').localeCompare(b.state||'')||b.list-a.list;
+    const da=parseDate(a.date_proposed)||a.list, db=parseDate(b.date_proposed)||b.list;
+    return s==='old'?(da-db)||(a.list-b.list):(db-da)||(b.list-a.list);
+  });
+  const mapped=VIEW.filter(r=>r.lat!=null);
+  $('#mapcount').textContent=nf(mapped.length)+' located';
+
+  LAYER.clearLayers();
+  mapped.forEach(r=>{
+    const m=L.circleMarker([r.lat,r.lon],{radius:6,color:'#fff',weight:1.5,opacity:1,
+      fillColor:COLORS[r.kind]||COLORS.other,fillOpacity:.92});
+    m.bindTooltip((r.proposed_name||r.title||'')+' — '+(r.state||''),{direction:'top'});
+    m.on('click',()=>openCase(r.i));
+    LAYER.addLayer(m);
+  });
+  renderList();
+}
+
+/* The case-files panel mirrors whatever the map is currently showing, so
+   panning to Chesapeake Bay lists the Chesapeake Bay proposals. Turning the
+   toggle off falls back to the whole filtered set. */
+function visibleRows(){
+  if(!FOLLOW || !MAP) return VIEW;
+  const b=MAP.getBounds();
+  return VIEW.filter(r=>r.lat!=null && b.contains([r.lat,r.lon]));
+}
+
+function renderList(){
+  const rows=visibleRows();
+  const noGeo=FOLLOW?VIEW.filter(r=>r.lat==null).length:0;
+  $('#count').textContent=nf(rows.length)+(rows.length===1?' file':' files')+
+    (FOLLOW?' in view':'');
+  $('#results').innerHTML=rows.length?rows.map(r=>{
+    const nm=r.kind==='change'&&r.current_name
+      ? `<span class="old">${esc(r.current_name)}</span> → ${esc(r.proposed_name||'')}`
+      : esc(r.proposed_name||r.title||'Untitled');
+    const bits=[r.feature_class,r.county,r.state].filter(Boolean).map(esc).join(' · ');
+    const tag=r.kind==='change'?'<span class="pill c">Change</span>':r.kind==='new'?'<span class="pill">New</span>':'<span class="pill o">Local</span>';
+    return `<button class="rec${SEL===r.i?' sel':''}" data-i="${r.i}"><b>${nm}</b>
+      <span class="meta">${tag}${bits}${r.withdrawn?' · Withdrawn':''}</span></button>`;
+  }).join('')+(noGeo?`<div class="empty">${noGeo} proposal${noGeo===1?'':'s'} without coordinates ${noGeo===1?'is':'are'} hidden while the list is matching the map.</div>`:'')
+   :`<div class="empty">Nothing in this part of the map.${FOLLOW?' Zoom out, or switch off “match the map”.':''}</div>`;
+  document.querySelectorAll('.rec').forEach(b=>b.addEventListener('click',()=>openCase(+b.dataset.i)));
+}
+
+function openCase(i){
+  const r=ROWS.find(x=>x.i===i); if(!r) return;
+  SEL=i;
+  document.querySelectorAll('.rec').forEach(b=>b.classList.toggle('sel',+b.dataset.i===i));
+  const m=DATA.meta.lists.find(l=>l.list===r.list);
+  $('#case-lbl').textContent=[r.state,'Review list '+r.list,m&&m.posted].filter(Boolean).join(' · ');
+  $('#case-title').textContent=r.title||r.proposed_name||'';
+  const f=[['Proposed name',r.proposed_name],['Current name',r.current_name],['Proposal type',r.proposal_type],
+    ['Proponent',r.proponent],['Date proposed',r.date_proposed],['BGN case number',r.case_number],
+    ['GNIS ID',r.gnis_id],['Feature class',r.feature_class],['Feature size',r.feature_size],
+    ['Where it is',r.feature_description],['County',r.county],['State',r.state],
+    ['Coordinates',r.coordinates],['Land ownership',r.land_ownership],['USGS topo map',r.topo_map],
+    ['Name history',r.name_history]].filter(([,v])=>v);
+  $('#case-body').innerHTML=
+    `<dl class="f">${f.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`+
+    `<div class="narr">`+
+      (r.case_summary?`<h4>Case summary</h4>${paras(r.case_summary)}`:'')+
+      (r.other_names?`<h4>Other names found</h4>${paras(r.other_names)}`:'')+
+      (r.stakeholders?`<h4>Who was consulted</h4>${paras(r.stakeholders)}`:'')+
+    `</div><a class="srcbtn" target="_blank" rel="noopener" href="${esc(pdf(r.list))}">Open review list ${r.list} (PDF) →</a>`;
+  $('#case').classList.add('open'); $('#case').setAttribute('aria-hidden','false');
+  if(r.lat!=null&&MAP) MAP.setView([r.lat,r.lon],Math.max(MAP.getZoom(),9));
+}
+function paras(t){
+  return String(t).split(/(?<=\.)\s+(?=[A-Z"])/).reduce((a,s)=>{
+    if(a.length&&(a[a.length-1].length+s.length)<340) a[a.length-1]+=' '+s; else a.push(s);
+    return a;},[]).map(p=>`<p>${esc(p)}</p>`).join('');
+}
+function pdf(n){
+  const b='https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/';
+  return b+encodeURIComponent((n>=462?'Quarterly Review List ':'Review List ')+n+'.pdf');
+}
+function closeCase(){$('#case').classList.remove('open');$('#case').setAttribute('aria-hidden','true');}
+</script>
+</body>
+</html>
