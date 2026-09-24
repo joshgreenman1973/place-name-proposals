@@ -7,47 +7,55 @@
 <meta name="description" content="Every geographic name proposal pending before the U.S. Board on Geographic Names, from Quarterly Review Lists 450 to 464. Searchable case files, mapped.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="house.css">
 <style>
-:root{--ink3:#8a4f72}
-#map{height:min(64vh,600px);width:100%;background:#dfe3dc}
-.leaflet-container{font-family:var(--sans);font-size:12px;background:#dfe3dc}
-#results{max-height:min(64vh,600px);overflow:auto}
-.rec .old{color:var(--ink2);font-weight:400;text-decoration:line-through;text-decoration-thickness:1px}
-.legend{display:flex;gap:15px;flex-wrap:wrap;font-size:var(--t-micro);letter-spacing:.1em;
-  text-transform:uppercase;font-weight:700;color:var(--ink2);padding:9px 26px;border-top:1px solid var(--hair)}
-.legend i{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px}
-#follow{padding:3px 9px;margin-left:10px;font-size:9px;vertical-align:middle}
+:root{--accent:var(--rose)}
+#map{height:min(66vh,620px);width:100%;background:var(--bg2)}
+.leaflet-container{font-family:var(--sans);font-size:13px;background:var(--bg2)}
+.leaflet-tooltip{background:var(--bg2);color:var(--fg);border:1px solid var(--line);border-radius:0;box-shadow:none;font-size:14px;padding:5px 9px}
+.leaflet-tooltip-top:before{border-top-color:var(--line)}
+.leaflet-bar{border:1px solid var(--line)!important;border-radius:0!important;box-shadow:none!important}
+.leaflet-bar a,.leaflet-bar a:hover{background:var(--bg2);color:var(--fg);border-bottom-color:var(--line);border-radius:0!important}
+.leaflet-control-attribution{background:rgba(17,19,17,.8)!important;color:var(--fg2)}
+.leaflet-control-attribution a{color:var(--fg2)}
+#results{max-height:min(70vh,640px);overflow:auto}
+.rec .old{color:var(--fg2);font-weight:400;text-decoration:line-through;text-decoration-thickness:1px}
+.pill{background:var(--mint)}.pill.c{background:var(--cobalt)}.pill.o{background:var(--rose)}
+#follow{padding:3px 9px;margin-left:10px;font-size:var(--t-micro);vertical-align:middle}
 #follow[aria-pressed="true"]::before{content:"✓ ";}
 .colhead>span:first-child{display:flex;align-items:center}
+.chips{border-bottom:1px solid var(--line)}
 </style>
 </head>
 <body>
 <div class="sheet">
 
   <div class="strip">
-    <span>U.S. Board on Geographic Names &middot; Domestic Names Committee</span>
-    <span id="range">Quarterly review lists</span>
+    <span>Board on Geographic Names quarterly review lists</span>
+    <span id="range">February 2023 to July 2026</span>
   </div>
 
   <div class="head">
-    <!-- mark: contour rings around a summit, one of them being redrawn -->
-    <div class="hmark" aria-hidden="true">
-      <img src="img/mark.png" alt="Abstract screenprint of overlapping topographic contour lines, one drawn as a dashed boundary being redrawn" width="640" height="357">
-    </div>
     <h1>Under review</h1>
-    <p class="sub">The Board on Geographic Names decides the official name of every American stream,
-      summit, lake and ridge. <b>Anyone can file a proposal.</b> Each becomes a case file stating who
-      asked, what they want it called, where the feature is and the reason they gave. These are the
-      ones still on the docket.</p>
+    <p class="finding">Of 493 place-name proposals listed for federal review since February 2023, 147 would replace an existing name, 51 of them a name considered offensive or derogatory.</p>
+    <p class="lede">The Board decides the official name of every American stream, summit, lake and ridge,
+      and anyone can file a proposal. Each becomes a case file stating who asked, the name they want,
+      where the feature is and the reason they gave. Review lists <span id="lists">450 to 464</span> hold
+      <b id="n-all">493</b> proposals from <b id="n-states">47</b> states and territories: <b id="n-new">285</b>
+      would name a feature that has no official name, <b id="n-chg">147</b> would change an existing name
+      and <b id="n-loc">61</b> would make a local name official. A listing is not a decision, and this site
+      does not track what the Board decided.</p>
     <p class="src">Source: <a href="https://www.usgs.gov/us-board-on-geographic-names/dnc-review-lists" target="_blank" rel="noopener">Domestic Names Committee quarterly review lists</a>
-      &middot; <a href="methodology.html">method</a></p>
+      &middot; <a href="methodology.html">Method</a></p>
   </div>
 
-  <div class="capline" id="capline"></div>
-  <div class="counts" id="counts"></div>
+  <div class="fig">
+    <div class="figcap"><span><b>Each dot is one proposal, placed at the coordinates in its case file.</b> <span id="mapcount"></span></span>
+      <span><span class="key"><i style="background:var(--mint)"></i>New name</span><span class="key"><i style="background:var(--cobalt)"></i>Name change</span><span class="key"><i style="background:var(--rose)"></i>Local name made official</span></span></div>
+    <div id="map"></div>
+  </div>
 
   <div class="controls">
     <input id="q" type="search" placeholder="Search names, proponents, counties, case summaries…" autocomplete="off">
@@ -59,7 +67,7 @@
       <option value="az">Name A–Z</option><option value="state">By state</option>
     </select>
   </div>
-  <div class="controls" style="border-bottom:1px solid var(--hair)">
+  <div class="controls chips">
     <button class="chip" data-f="new" aria-pressed="false">New names</button>
     <button class="chip" data-f="change" aria-pressed="false">Name changes</button>
     <button class="chip" data-f="other" aria-pressed="false">Local name made official</button>
@@ -69,26 +77,12 @@
     <button class="chip" data-f="withdrawn" aria-pressed="false">Withdrawn</button>
   </div>
 
-  <div class="cols">
-    <div class="col">
-      <div class="colhead"><span>The map</span><span id="mapcount"></span></div>
-      <div id="map"></div>
-      <div class="legend">
-        <span><i style="background:#4a6b52"></i>New name</span>
-        <span><i style="background:#2f4d8a"></i>Name change</span>
-        <span><i style="background:#8a4a6b"></i>Local name made official</span>
-        <span>Base map: USGS National Map</span>
-      </div>
-    </div>
-    <div class="col">
-      <div class="colhead">
-        <span>Case files <button class="chip" id="follow" aria-pressed="true"
-          title="Show only the proposals currently visible on the map">Match the map</button></span>
-        <span id="count"></span>
-      </div>
-      <div id="results"></div>
-    </div>
+  <div class="colhead">
+    <span>Case files <button class="chip" id="follow" aria-pressed="true"
+      title="Show only the proposals currently visible on the map">Match the map</button></span>
+    <span id="count"></span>
   </div>
+  <div id="results"></div>
 
   <div class="foot">
     <p class="caution">Built with AI assistance from the Board's own PDFs. Names, quotations and case
@@ -115,7 +109,8 @@
 const $=s=>document.querySelector(s);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=n=>Number(n).toLocaleString('en-US');
-const COLORS={new:'#4a6b52',change:'#2d4a86',other:'#8a4a6b'};
+const TK=n=>getComputedStyle(document.documentElement).getPropertyValue('--'+n).trim();
+const COLORS={new:TK('mint'),change:TK('cobalt'),other:TK('rose')};
 let DATA,ROWS=[],VIEW=[],SEL=null,MAP,LAYER,FOLLOW=true;
 const FILT={q:'',state:'',klass:'',list:'',sort:'new',flags:new Set()};
 
@@ -131,21 +126,11 @@ function parseDate(s){
 
 function init(){
   const M=DATA.meta;
-  $('#range').textContent='Lists '+M.list_min+'–'+M.list_max;
   const changes=ROWS.filter(r=>r.kind==='change').length;
-  const offensive=ROWS.filter(r=>r.offensive).length;
-  $('#capline').innerHTML='Filed with the Board between <b>'+esc(M.posted_first)+
-    '</b> and <b>'+esc(M.posted_last)+'</b> &middot; quarterly review lists '+M.list_min+'&ndash;'+M.list_max+
-    ' &middot; <b>none of these have been decided</b> — every count below is of pending proposals';
-  const news=ROWS.filter(r=>r.kind==='new').length;
-  const local=ROWS.filter(r=>r.kind==='other').length;
-  $('#counts').innerHTML=[
-    [nf(M.count),'Proposals pending'],
-    [nf(news),'New names for unnamed features'],
-    [nf(changes),'Would change an existing name'],
-    [nf(local),'Would make a local name official'],
-    [nf(offensive),'Would replace a name the Board calls offensive'],
-  ].map(([b,s])=>`<div><b>${b}</b><span>${s}</span></div>`).join('');
+  const set=(id,v)=>{$(id).textContent=v};
+  set('#lists',M.list_min+' to '+M.list_max);set('#n-all',nf(M.count));set('#n-states',nf(M.states));
+  set('#n-new',nf(ROWS.filter(r=>r.kind==='new').length));set('#n-chg',nf(changes));
+  set('#n-loc',nf(ROWS.filter(r=>r.kind==='other').length));
   $('#foot-note').textContent='Covering review lists '+M.list_min+' through '+M.list_max+
     ' (posted '+M.posted_first+' through '+M.posted_last+'). '+M.with_coords+' of '+M.count+
     ' proposals carry coordinates and appear on the map.';
@@ -159,9 +144,10 @@ function init(){
     $('#list').innerHTML+=`<option value="${n}">List ${n} · ${esc(m&&m.posted||'')}</option>`;
   });
 
-  MAP=L.map('map',{scrollWheelZoom:true}).setView([39.5,-98.5],4);
-  L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',
-    {maxZoom:16,attribution:'USGS The National Map'}).addTo(MAP);
+  MAP=L.map('map',{scrollWheelZoom:true}).fitBounds([[24.5,-125],[49.5,-66.5]]);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2r82_1_ae4e70b6166057bc41b89638',
+    {maxZoom:18,subdomains:'abcd',attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'}).addTo(MAP);
+  MAP.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
   LAYER=L.layerGroup().addTo(MAP);
   MAP.on('moveend zoomend',renderList);
   $('#follow').addEventListener('click',e=>{
@@ -209,11 +195,11 @@ function render(){
     return s==='old'?(da-db)||(a.list-b.list):(db-da)||(b.list-a.list);
   });
   const mapped=VIEW.filter(r=>r.lat!=null);
-  $('#mapcount').textContent=nf(mapped.length)+' located';
+  $('#mapcount').textContent=nf(mapped.length)+' of '+nf(VIEW.length)+' shown have coordinates.';
 
   LAYER.clearLayers();
   mapped.forEach(r=>{
-    const m=L.circleMarker([r.lat,r.lon],{radius:6,color:'#fff',weight:1.5,opacity:1,
+    const m=L.circleMarker([r.lat,r.lon],{radius:6,color:TK('bg'),weight:1.5,opacity:1,
       fillColor:COLORS[r.kind]||COLORS.other,fillOpacity:.92});
     m.bindTooltip((r.proposed_name||r.title||'')+' — '+(r.state||''),{direction:'top'});
     m.on('click',()=>openCase(r.i));

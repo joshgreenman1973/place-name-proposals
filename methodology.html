@@ -6,37 +6,29 @@
 <title>How this was built — Under review</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,600;0,800;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="house.css">
 <style>
-:root{--paper:#efe7d7;--card:#faf6ec;--ink:#1c211c;--ink2:#5a5245;--rule:#b9ab90;--brown:#8a6234;
---mono:'IBM Plex Mono',ui-monospace,monospace;--serif:'Bitter',Georgia,serif}
-*{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);line-height:1.62;font-size:16.5px}
-.wrap{max-width:760px;margin:0 auto;padding:0 22px 80px}
-header{border:1px solid var(--ink);border-top-width:5px;background:var(--card);margin:18px 0 30px;padding:22px 24px}
-h1{font-size:clamp(1.9rem,4.6vw,2.9rem);line-height:1.05;margin:0 0 8px;font-weight:800;letter-spacing:-.02em}
-.back{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);text-decoration:none}
-.back:hover{color:var(--ink)}
-h2{font-family:var(--mono);font-size:11px;letter-spacing:.17em;text-transform:uppercase;color:var(--ink2);
-   margin:34px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
-p{margin:0 0 14px}
-ul{margin:0 0 14px;padding-left:20px}
-li{margin-bottom:7px}
-code{font-family:var(--mono);font-size:.86em;background:#e7dcc4;padding:1px 5px}
-table{width:100%;border-collapse:collapse;font-size:.86rem;font-family:var(--mono);margin:0 0 16px}
-th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--rule)}
-th{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink2)}
-.note{border:1px dashed var(--rule);padding:13px 15px;font-size:.92rem;margin:16px 0}
-a{color:var(--brown)}
+:root{--accent:var(--rose)}
+.doc{max-width:780px;padding:0 clamp(16px,4vw,48px) 70px}
+.doc h2{font-size:1.3rem;margin:32px 0 9px}
+.doc p{margin:0 0 13px;line-height:1.62}
+.doc ul{margin:0 0 13px;padding-left:20px}.doc li{margin-bottom:7px;line-height:1.55}
+.doc strong{color:var(--fg)}
+.doc table.h{margin:0 0 16px}
+code{font-family:var(--sans);font-weight:600;font-size:.92em;background:var(--bg2);padding:1px 5px;overflow-wrap:anywhere}
+.back{font-size:var(--t-small);color:var(--fg2);text-decoration:none}
+.back:hover{color:var(--fg)}
 </style>
 </head>
 <body>
-<div class="wrap">
-<header>
-  <a class="back" href="index.html">&larr; Back to the map</a>
-  <h1>How this was built</h1>
-  <p style="margin:0;color:#5a5245">Sources, parsing method, scope and the things this database does not tell you.</p>
-</header>
+<div class="sheet">
+  <div class="strip"><a class="back" href="index.html">&larr; Back to the map</a><span>Method</span></div>
+  <div class="head">
+    <h1>How this was built</h1>
+    <p class="lede">Sources, parsing method, scope and the things this database does not tell you.</p>
+  </div>
+  <div class="doc">
 
 <h2>What the source is</h2>
 <p>The U.S. Board on Geographic Names is the federal body that decides the official name of
@@ -80,8 +72,8 @@ single proposal can carry several names. List 458 announces 69 names; it contain
 which rename a cluster of connected features at once. The per-list numbers below show both, so the gap is
 visible rather than hidden.</p>
 
-<table id="tbl">
-  <thead><tr><th>List</th><th>Posted</th><th>Names stated</th><th>Proposals parsed</th><th>With coordinates</th></tr></thead>
+<table class="h" id="tbl">
+  <thead><tr><th>List</th><th>Posted</th><th class="n">Names stated</th><th class="n">Proposals parsed</th><th class="n">With coordinates</th></tr></thead>
   <tbody></tbody>
 </table>
 
@@ -132,7 +124,7 @@ redactions, which it applies to some terms and not others. Nothing was sanitized
   <li><strong>Foreign and Antarctic names</strong>, which a separate Board committee handles.</li>
 </ul>
 
-<div class="note">
+<div class="caution" style="margin:16px 0">
   <strong>Built with AI assistance.</strong> The parsing, the site and this page were produced with Claude.
   Every field is machine-extracted from the Board's PDFs, and PDF extraction can misread a line. Each case
   file links to its source PDF. Check it before relying on any single detail.
@@ -144,12 +136,13 @@ a folder of review-list PDFs named <code>list_&lt;number&gt;.pdf</code> and it w
 The Board posts a new list roughly every quarter, in January, April, July and October.</p>
 
 <p style="margin-top:34px"><a class="back" href="index.html">&larr; Back to the map</a></p>
+  </div>
 </div>
 <script>
 fetch('data/proposals.json').then(r=>r.json()).then(d=>{
   const tb=document.querySelector('#tbl tbody');
   tb.innerHTML = d.meta.lists.map(l=>`<tr><td>${l.list}</td><td>${l.posted||''}</td>
-    <td>${l.stated_names??l.stated_proposals??'—'}</td><td>${l.parsed}</td><td>${l.with_coords}</td></tr>`).join('');
+    <td class="n">${l.stated_names??l.stated_proposals??'—'}</td><td class="n">${l.parsed}</td><td class="n">${l.with_coords}</td></tr>`).join('');
 }).catch(()=>{});
 </script>
 </body>
