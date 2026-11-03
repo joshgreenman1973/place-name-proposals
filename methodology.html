@@ -44,12 +44,11 @@ cities and towns, Census designated places, civil divisions, ZIP codes or admini
 <h2>Scope, and why it stops where it does</h2>
 <p>This database covers <strong>Review Lists 450 through 464</strong>, posted February 6, 2023 through
 July 16, 2026. That is <strong>493 proposals</strong> across 47 states and territories.</p>
-<p>The cutoff is a data-quality decision, not an arbitrary one. Every proposal in lists 450 and later
+<p>The cutoff is a data-quality decision. Every proposal in lists 450 and later
 opens with a literal <code>Proposal Information</code> heading followed by a structured label/value block,
 which is what the parser splits on. Lists 442 through 449 use an earlier layout: compact
 semicolon-delimited paragraphs with no case numbers and different field names. Those older lists could
-have been parsed loosely, but the fields would not line up with the modern ones, and a database that
-silently mixes two schemas is worse than one that states its boundary. They are excluded on purpose.</p>
+have been parsed loosely, but the fields would not line up with the modern ones, so they are excluded.</p>
 
 <h2>How the parsing works</h2>
 <ul>
@@ -98,8 +97,8 @@ not plotted.</p>
 <h2>Categories, and how they were assigned</h2>
 <ul>
   <li><strong>New</strong> (285), <strong>Change</strong> (147) and <strong>Local name made official</strong>
-      (61) come from the proposal's own title and its stated proposal type. The third group matters: those
-      features already carry a name locally, and the Board is being asked to make that name the official
+      (61) come from the proposal's own title and its stated proposal type. Features in the third group
+      already carry a name locally, and the Board is being asked to make that name the official
       federal one. They are neither new coinages nor renamings.</li>
   <li><strong>Commemorative</strong> is set when the Board's own proposal type contains "commemorative."</li>
   <li><strong>Offensive or derogatory</strong> is set when the Board's proposal type says the name is
