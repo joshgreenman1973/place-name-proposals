@@ -1,7 +1,7 @@
 # Under review
 
 Every geographic name proposal pending before the U.S. Board on Geographic Names, parsed from its
-Quarterly Review Lists 450–464 (February 2023 – July 2026): 495 case files across 47 states, 488 of
+Quarterly Review Lists 450–464 (February 2023 – July 2026): 493 proposals across 47 states, 488 of
 them mapped, with the proponent's own stated reasoning.
 
 ## Data
